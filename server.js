@@ -1,71 +1,47 @@
 const express = require ('express');
+const mongoose = require ('mongoose');
+// import model Pasien
+const Pasien = require ('./models/Pasien');
+
 const app = express();
 const port = 3000;
 
 // Middleware - JSON reader
 app.use(express.json());
 
-// Mock database - variable list array of objects:
-// const dataPasien = [
-//     { id:1, nama: "Budi Doremi", keluhan: "Demam Tinggi", poli: "umum" },
-//     { id:2, nama: "Siti tilulit", keluhan: "Sakit Gigi", poli: "Gigi" },
-//     { id:3, nama: "Fajar Mentari", keluhan: "Pusing", poli: "umum" },
-//     { id:4, nama: "Afgan Syahreza", keluhan: "Batuk Berdahak", poli: "THT" }
-// ];
+// Key mongoDB:
+const mongoURI = 'mongodb+srv://mfadhol380_db_user:Jhnti9Y79yn22A14@mini-simrs.euqqlbd.mongodb.net/?appName=mini-simrs';
 
-// Endpoint testing: root
-app.get('/', (req, res) => {
-    res.send("Endpoint root SIMRS Works!");
-});
+// Menghubungkan Node.js ke MongoDB
+mongoose.connect(mongoURI)
+    .then(() => console.log('Berhasil terhubung ke MongoDB Atlas!'))
+    .catch((err) => console.log('Gagal terhubung ke MongoDB', err));
 
-// Endpoint: pasien
-app.get('/pasien', (req, res) => {
-    // Mengirim dataPasien dari mockup db ke bentuk JSON
-    res.json(dataPasien);
-});
-
-// Menambah data pasien baru
-app.post('/pasien', (req, res) => {
-    // Menangkap data JSON yang dikirim dari frontend/thunder client
-    const pasienBaru = req.body;
-
-    // Input data pasien baru ke db/backend
-    dataPasien.push(pasienBaru);
-
-    // Respon setelah data berhasil diinput ke db/backend
-    res.json({ message: "Data pasien berhasil ditambahkan!", data: pasienBaru });
-});
-
-// Pencarian/READ spesifik pasien dgn method GET by ID
-app.get('/pasien/:id', (req, res) => {
-    // Menangkap angka ID dari URL yg diketik, misal: /pasien/1/
-    const idDicari = parseInt(req.params.id);
-
-    // Mencari pasien dalam database mock yg ID nya cocok dgn yg dicari
-    const pasienDitemukan = dataPasien.find(pasien => pasien.id === idDicari);
-
-    if (pasienDitemukan) {
-        // Jika ketemu, kirim data pasien itu dlm bntuk json
-        res.json(pasienDitemukan);
-    } else {
-        // Kalo ngga ketemu tampilin respon code 400 (not found)
-        res.status(400).json({message: "Pasien tidak ditemukan!"});
+// MONGODB:
+// READ semua pasien dari MongoDB
+app.get('/pasien', async (req, res) => {
+    try {
+        // Mongoose mencari semua data di database
+        const dataPasien = await Pasien.find();
+        res.json(dataPasien);
+    } catch (error) {
+        res.status(500).json({message: "Terjadi kesalahan server"});
     }
 });
 
-// Menghapus data pasien
-app.delete('/pasien/:id', (req, res) => {
-    const idDicari = parseInt(req.params.id);
-    // Mencari index (baris) ke berapa data pasien itu ada di mock database
-     const index = dataPasien.findIndex(pasien => pasien.id === idDicari);
+// CREATE data pasien baru ke MongoDB
+app.post('/pasien', async (req, res) => {
+    try {
+        // Memberikan data dari req.body ke mongoose
+        const pasienBaru = new Pasien(req.body);
 
-    // Jika index bukan -1, artinya data berhasil ditemukan
-    if (index !== -1) {
-        // Menghapus 1 data dari index itu
-        dataPasien.splice(index, 1);
-        res.json({message: `Data pasien dengan ID ${idDicari} berhasil dihapus`});
-    } else {
-        res.status(400).json({message: "Data pasien tidak ditemukan, data gagal dihapus"});
+        // Mongoose menyimpan data ke database scr permanent
+        await pasienBaru.save();
+
+        res.status(201).json({message: "Data pasien berhasil disimpan permanen", data: pasienBaru});
+    } catch (error) {
+        // Jika data tidak sesuai aturan (cth: nama kosong) mongoose akan menolak
+        res.status(400).json({message: "Gagal menyimpan data", error: error.message});
     }
 });
 
