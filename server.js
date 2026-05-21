@@ -2,11 +2,15 @@ const express = require ('express');
 const mongoose = require ('mongoose');
 // import model Pasien
 const Pasien = require ('./models/Pasien');
+const cors = require ('cors');
 
 const app = express();
 const port = 3000;
 
-// Middleware - JSON reader
+// Middleware:
+// CORS permission agar frontend bebas ambil data
+app.use(cors());
+// JSON reader
 app.use(express.json());
 
 // Key mongoDB:
