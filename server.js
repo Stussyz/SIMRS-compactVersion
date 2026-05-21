@@ -5,7 +5,7 @@ const Pasien = require ('./models/Pasien');
 const cors = require ('cors');
 
 const app = express();
-const port = 3000;
+const port = 5000;
 
 // Middleware:
 // CORS permission agar frontend bebas ambil data
