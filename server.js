@@ -2,6 +2,8 @@ const express = require ('express');
 const mongoose = require ('mongoose');
 // import model Pasien
 const Pasien = require ('./models/Pasien');
+const Dokter = require ('./models/Dokter');
+const JanjiTemu = require ('./models/JanjiTemu');
 const cors = require ('cors');
 
 const app = express();
@@ -21,8 +23,8 @@ mongoose.connect(mongoURI)
     .then(() => console.log('Berhasil terhubung ke MongoDB Atlas!'))
     .catch((err) => console.log('Gagal terhubung ke MongoDB', err));
 
-// MONGODB:
-// READ semua pasien dari MongoDB
+// Pasien:
+// Melihat (GET) semua data pasien dari MongoDB
 app.get('/pasien', async (req, res) => {
     try {
         // Mongoose mencari semua data di database
@@ -33,7 +35,7 @@ app.get('/pasien', async (req, res) => {
     }
 });
 
-// CREATE data pasien baru ke MongoDB
+// Membuat (POST) data pasien baru ke MongoDB
 app.post('/pasien', async (req, res) => {
     try {
         // Memberikan data dari req.body ke mongoose
@@ -46,6 +48,56 @@ app.post('/pasien', async (req, res) => {
     } catch (error) {
         // Jika data tidak sesuai aturan (cth: nama kosong) mongoose akan menolak
         res.status(400).json({message: "Gagal menyimpan data", error: error.message});
+    }
+});
+
+// Dokter:
+// Melihat (GET) semua list dokter
+app.get('/dokter', async (req, res) => {
+    try {
+        const dataDokter = await Dokter.find();
+        res.json(dataDokter);
+    } catch (error) {
+        res.status(500).json({message: "Terjadi kesalahan saat mengambil data dokter"});
+    }
+});
+
+// Membuat (POST) data dokter baru
+app.post('/dokter', async (req, res) => {
+    try {
+        const dokterBaru = new Dokter(req.body);
+        await dokterBaru.save();
+        res.status(201).json({message: "Berhasil menambah data dokter baru", data: dokterBaru});
+    } catch (error) {
+        res.status(400).json({message: "Gagal menyimpan data dokter baru", error: error.message});
+    }
+});
+
+// Janji Temu Dokter:
+// Melihat (GET) daftar antrian
+app.get('/janjitemu', async (req, res) => {
+    try {
+        // .populate() = untuk mengganti ID menjadi data utuh
+        const dataJanji = await JanjiTemu.find()
+        // mengambil "nama dan keluhan" dari data pasien
+        .populate('pasienId', 'nama keluhan')
+        // mengambil "nama dan spesialis" dari data dokter
+        .populate('dokterId', 'nama spesialisasi');
+
+        res.json(dataJanji);
+    } catch (error) {
+        res.status(500).json({message: "Terjadi kesalahan pada server", error: error.message});
+    }
+});
+
+// Membuat (POST) antrian baru
+app.post('/janjitemu', async (req, res) => {
+    try {
+        const janjiBaru = new JanjiTemu(req.body);
+        await janjiBaru.save();
+        res.status(201).json({message: "Janji temu berhasil dibuat", data: janjiBaru});
+    } catch (error) {
+        res.status(400).json({message: "Gagal membuat janji temu", error: error.message});
     }
 });
 
