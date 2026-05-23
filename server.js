@@ -101,6 +101,39 @@ app.post('/janjitemu', async (req, res) => {
     }
 });
 
+// Mengubah (PUT) status antrian berdasarkan ID Janji Temu
+app.put('/janjitemu/:id', async (req, res) => {
+    try {
+        // Menangkap ID dari dari URL (req.params.id)
+        const idJanji = req.params.id;
+
+        // Menangkap status baru dari body/JSON (req.body.status)
+        const statusBaru = req.body.status;
+
+        // Meminta Mongoose mencari ID tsb dan langsung mengubah statusnya
+        const janjiDiupdate = await JanjiTemu.findByIdAndUpdate(
+            idJanji,
+            {status: statusBaru},
+            // Rules yg akan meminta Mongoose me-return data paling terbaru
+            // RunValidators akan memaksa mongoose mengecek aturan enum-nya
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        // Jika ID tidak valid/tidak ditemukan di database
+        if (!janjiDiupdate) {
+            return res.status(404).json({message: "Data janji temu tidak ditemukan!"});
+        }
+
+        // Jika ID berhasil ditemukan
+        res.json({message: "Status antrean berhasil diperbarui!", data: janjiDiupdate});
+    } catch {
+        res.status(400).json({message: "Gagal memperbarui status", error: error.message});
+    }
+});
+
 // Menyalakan server
 app.listen(port, () => {
     console.log(`Server running di port ${port}`);
