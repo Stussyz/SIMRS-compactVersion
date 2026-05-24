@@ -134,6 +134,27 @@ app.put('/janjitemu/:id', async (req, res) => {
     }
 });
 
+// Menghapus (DELETE) data janji temu berdasarkan ID
+app.delete('/janjitemu/:id', async (req, res) => {
+    try {
+        // Menangkap ID dari URL
+        const idJanji = req.params.id;
+
+        // Meminta mongoose mencari ID tsb dan menghapusnya dari DB
+        const janjiDihapus = await JanjiTemu.findByIdAndDelete(idJanji);
+
+        // Jika ID yang dikirim tidak ada di DB maka tampilkan pesan
+        if (!janjiDihapus) {
+            return res.status(404).json({message: "Data tidak ditemukan, gagal menghapus data!"});
+        }
+
+        // Jika berhasil dieksekusi maka tampilkan pesan
+        res.json({message: "Data janji temu berhasil dihapus permanen!"});
+    } catch (error) {
+        res.status(500).json({message: "Terjadi kesalahan pada server", error: error.message});
+    }
+});
+
 // Menyalakan server
 app.listen(port, () => {
     console.log(`Server running di port ${port}`);
