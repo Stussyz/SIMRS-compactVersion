@@ -19,6 +19,17 @@ const pasienSchema = new mongoose.Schema({
         type: Date,
         // jika date tidak diisi maka otomatis diisi tanggal sekarang
         default: Date.now
+    },
+    nomorBpjs: {
+        type: String,
+        required: true
+    },
+    statusBpjs: {
+        type: String
+    },
+    tanggalDaftar: {
+        type: Date,
+        default: Date.now
     }
 });
 
