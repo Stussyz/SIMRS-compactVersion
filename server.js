@@ -38,13 +38,37 @@ app.get('/pasien', async (req, res) => {
 // Membuat (POST) data pasien baru ke MongoDB
 app.post('/pasien', async (req, res) => {
     try {
-        // Memberikan data dari req.body ke mongoose
-        const pasienBaru = new Pasien(req.body);
+        // Ambil payload dari frontend
+        const {nama, keluhan, poli, nomorBpjs} = req.body;
+
+        // Backend call API server BPJS (simulasi)
+        // localhots:5000 akan diganti pakai url BPJS
+        const responBpjs = await fetch (`http://localhost:5000/api-luar/bpjs/${nomorBpjs}`);
+        const dataBpjs = await responBpjs.json();
+
+        // Jika No. kartu ngawur/tidak valid, tolak registrasinya
+        if (!responBpjs.ok) {
+            return res.status(400).json({
+                message: "Pendaftaran ditolak " + dataBpjs.message
+            });
+        }
+
+        // Jika No. kartu BPJS Valid/Menunggak, lanjut membuat data pasien
+        const pasienBaru = new Pasien({
+            nama,
+            keluhan,
+            poli,
+            nomorBpjs,
+            statusBpjs: dataBpjs.status
+        });
 
         // Mongoose menyimpan data ke database scr permanent
         await pasienBaru.save();
 
-        res.status(201).json({message: "Data pasien berhasil disimpan permanen", data: pasienBaru});
+        res.status(201).json({
+            message: "Data pasien berhasil didaftarkan",
+            data: pasienBaru
+        });
     } catch (error) {
         // Jika data tidak sesuai aturan (cth: nama kosong) mongoose akan menolak
         res.status(400).json({message: "Gagal menyimpan data", error: error.message});
@@ -152,6 +176,36 @@ app.delete('/janjitemu/:id', async (req, res) => {
         res.json({message: "Data janji temu berhasil dihapus permanen!"});
     } catch (error) {
         res.status(500).json({message: "Terjadi kesalahan pada server", error: error.message});
+    }
+});
+
+
+// Simulasi server BPJS:
+// Memeriksa (GET) status kartu BPJS pasien
+app.get('/api-luar/bpjs/:nomorKartu', (req, res) => {
+    const nomor = req.params.nomorKartu;
+
+    // Mock database peserta BPJS seluruh indonesia
+    if (nomor === "1234567890") {
+        return res.json({
+            status: "AKTIF",
+            namaPeserta: "Oksa",
+            kelas: "Kelas 2"
+        });
+    } else if (nomor === "0987654321") {
+        return res.json ({
+            status: "MENUNGGAK",
+            namaPeserta: "Ratna",
+            kelas: "Kelas 1"
+        });
+    }
+
+    // Jika nomor bpjs tidak ditemukan, berarti tidak terdaftar/palsu
+    else {
+        return res.status(404).json ({
+            status: "TIDAK DITEMUKAN",
+            pesan: "Nomor karu BPJS Anda tidak terdaftar dalam sistem."
+        });
     }
 });
 
