@@ -89,7 +89,13 @@ app.get('/dokter', async (req, res) => {
 // Membuat (POST) data dokter baru
 app.post('/dokter', async (req, res) => {
     try {
-        const dokterBaru = new Dokter(req.body);
+        const {nama, spesialisasi, jadwalHari, jamPraktik} = req.body
+        const dokterBaru = new Dokter({
+            nama,
+            spesialisasi,
+            jadwalHari,
+            jamPraktik
+        });
         await dokterBaru.save();
         res.status(201).json({message: "Berhasil menambah data dokter baru", data: dokterBaru});
     } catch (error) {
