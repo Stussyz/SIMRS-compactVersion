@@ -23,6 +23,11 @@ const janjiTemuSchema = new mongoose.Schema({
         required: true
     },
 
+    nomorAntrean: {
+        type: String, 
+        required: true
+    },
+
     // Status Antrian
     status: {
         type: String,
