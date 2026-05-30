@@ -120,10 +120,45 @@ app.get('/janjitemu', async (req, res) => {
     }
 });
 
-// Membuat (POST) antrian baru
+// Membuat (POST) antrian janji temu baru
 app.post('/janjitemu', async (req, res) => {
     try {
-        const janjiBaru = new JanjiTemu(req.body);
+        // 1. Ekstrak data yang dibutuhkan dari req.body untuk dihitung
+        const { dokterId, tanggalJanji } = req.body;
+
+        // 2. Cari dokter untuk mendapatkan polinya
+        const dataDokter = await Dokter.findById(dokterId);
+        if (!dataDokter) {
+            return res.status(404).json({ message: "Dokter tidak ditemukan" });
+        }
+
+        // 3. Buat Kode Poli
+        let kodePoli = dataDokter.spesialisasi.substring(0, 3).toUpperCase();
+        if (kodePoli === "UMU") kodePoli = "UMM";
+
+        // 4. Hitung rentang waktu hari tersebut
+        const awalHari = new Date(tanggalJanji);
+        awalHari.setHours(0, 0, 0, 0);
+        const akhirHari = new Date(tanggalJanji);
+        akhirHari.setHours(23, 59, 59, 999);
+
+        // 5. Hitung jumlah pasien
+        const jumlahPasienHariIni = await JanjiTemu.countDocuments({
+            dokterId: dokterId,
+            tanggalJanji: { $gte: awalHari, $lte: akhirHari }
+        });
+
+        // 6. Buat nomor antrean (Contoh: UMM-001)
+        const urutanSelanjutnya = jumlahPasienHariIni + 1;
+        const nomorAntreanResmi = `${kodePoli}-${urutanSelanjutnya.toString().padStart(3, '0')}`;
+
+        // 7. Simpan ke DB dengan style Spread Operator
+        // ...req.body artinya "ambil semua isi req.body yang asli, lalu tambahkan nomorAntrean di dalamnya"
+        const janjiBaru = new JanjiTemu({
+            ...req.body, 
+            nomorAntrean: nomorAntreanResmi
+        });
+        
         await janjiBaru.save();
         res.status(201).json({message: "Janji temu berhasil dibuat", data: janjiBaru});
     } catch (error) {
@@ -187,32 +222,69 @@ app.delete('/janjitemu/:id', async (req, res) => {
 
 
 // Simulasi server BPJS:
-// Memeriksa (GET) status kartu BPJS pasien
+// 1. Variabel Penampung - Array of Objects (Mock Database BPJS)
+const mockDatabaseBpjs = [
+  {
+    nomorKartu: "1234567890",
+    namaPeserta: "Oksa",
+    status: "AKTIF",
+    kelas: "Kelas 2"
+  },
+  {
+    nomorKartu: "0987654321",
+    namaPeserta: "Ratna",
+    status: "MENUNGGAK",
+    kelas: "Kelas 3"
+  },
+  {
+    nomorKartu: "1122334455",
+    namaPeserta: "Dewi",
+    status: "AKTIF",
+    kelas: "Kelas 1"
+  },
+  {
+    nomorKartu: "2233445566",
+    namaPeserta: "Budi",
+    status: "AKTIF",
+    kelas: "Kelas 3"
+  },
+  {
+    nomorKartu: "3344556677",
+    namaPeserta: "Andi",
+    status: "AKTIF",
+    kelas: "Kelas 2"
+  },
+  {
+    nomorKartu: "4455667788",
+    namaPeserta: "Intan",
+    status: "Menunggak",
+    kelas: "Kelas 2"
+  },
+];
+
+// 2. Pengecekan BPJS
 app.get('/api-luar/bpjs/:nomorKartu', (req, res) => {
-    const nomor = req.params.nomorKartu;
+  const nomor = req.params.nomorKartu;
 
-    // Mock database peserta BPJS seluruh indonesia
-    if (nomor === "1234567890") {
-        return res.json({
-            status: "AKTIF",
-            namaPeserta: "Oksa",
-            kelas: "Kelas 2"
-        });
-    } else if (nomor === "0987654321") {
-        return res.json ({
-            status: "MENUNGGAK",
-            namaPeserta: "Ratna",
-            kelas: "Kelas 1"
-        });
-    }
+  // Mencari data di dalam array. 
+  // Jika ketemu, seluruh data pasien itu akan masuk ke variabel 'pasienDitemukan'
+  // Jika tidak ketemu, isinya akan menjadi 'undefined'
+  const pasienDitemukan = mockDatabaseBpjs.find(pasien => pasien.nomorKartu === nomor);
 
-    // Jika nomor bpjs tidak ditemukan, berarti tidak terdaftar/palsu
-    else {
-        return res.status(404).json ({
-            status: "TIDAK DITEMUKAN",
-            pesan: "Nomor karu BPJS Anda tidak terdaftar dalam sistem."
-        });
-    }
+  if (pasienDitemukan) {
+    // Jika data ditemukan, kita kembalikan datanya ke Frontend
+    return res.json({ 
+      status: pasienDitemukan.status, 
+      namaPeserta: pasienDitemukan.namaPeserta, 
+      kelas: pasienDitemukan.kelas 
+    });
+  } else {
+    // Jika data undefined (tidak ketemu)
+    return res.status(404).json({ 
+      status: "TIDAK DITEMUKAN", 
+      pesan: "Nomor kartu BPJS Anda tidak terdaftar dalam sistem." 
+    });
+  }
 });
 
 // Menyalakan server
